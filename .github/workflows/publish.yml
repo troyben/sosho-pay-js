@@ -1,0 +1,61 @@
+name: JavaScript SDK
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Existing release tag version, e.g. 1.0.0'
+        required: true
+        type: string
+      source_sha:
+        description: 'Exact reviewed 40-character commit SHA'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: sdk-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --ignore-scripts
+      - run: npm run build && npm test
+      - run: npm pack --dry-run
+  publish:
+    if: github.event_name == 'workflow_dispatch' && github.repository == 'troyben/sosho-pay-js' && vars.SDK_PUBLISH_ENABLED == 'true'
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: npm-release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify exact release tag on main
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_SHA: ${{ inputs.source_sha }}
+        run: |
+          node --input-type=module -e 'import fs from "node:fs"; const v=process.env.RELEASE_VERSION; if(!/^\d+\.\d+\.\d+$/.test(v)||JSON.parse(fs.readFileSync("package.json")).version!==v||!(/^[a-f0-9]{40}$/.test(process.env.RELEASE_SHA))||process.env.GITHUB_SHA!==process.env.RELEASE_SHA||process.env.GITHUB_REF!==`refs/tags/v${v}`) throw Error("Release must match the reviewed tag, package version and exact commit")'
+          git merge-base --is-ancestor "$RELEASE_SHA" origin/main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+      - run: npm ci --ignore-scripts
+      - run: npm run build && npm test
+      - name: Check npm supports trusted publishing
+        run: node -e 'const [major,minor,patch]=require("node:child_process").execFileSync("npm",["--version"],{encoding:"utf8"}).trim().split(".").map(Number); if(major<11 || (major===11 && (minor<5 || (minor===5 && patch<1)))) throw Error("npm >=11.5.1 is required")'
+      - run: npm publish --access public --provenance --ignore-scripts

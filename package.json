@@ -1,0 +1,24 @@
+{
+  "name": "@soshopay/sdk",
+  "version": "1.0.0",
+  "description": "Thin Soshopay API client with generated types",
+  "license": "MIT",
+  "homepage": "https://payment-gateway.soshopay.com/docs/",
+  "repository": { "type": "git", "url": "git+https://github.com/troyben/sosho-pay-js.git" },
+  "bugs": { "url": "https://github.com/troyben/sosho-pay-js/issues" },
+  "keywords": ["soshopay", "payments", "ecocash", "typescript"],
+  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "examples", "README.md", "LICENSE"],
+  "bin": { "soshopay": "dist/cli.js" },
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./public": { "types": "./dist/public.d.ts", "import": "./dist/public.js" },
+    "./testing": { "types": "./dist/testing.d.ts", "import": "./dist/testing.js" }
+  },
+  "engines": { "node": ">=22" },
+  "scripts": { "build": "tsc -p tsconfig.json", "prepack": "npm run build", "test": "node --test tests/*.test.mjs && tsc -p tests/tsconfig.browser.json" },
+  "devDependencies": { "typescript": "~6.0.2", "@types/node": "^24.13.3" }
+}
